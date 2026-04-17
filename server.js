@@ -1,432 +1,260 @@
-/**
- * L'Atelier Laser — Serveur
- *
- * Ce fichier a deux modes de fonctionnement :
- *
- * 1. AVEC npm (recommandé) : après `npm install`, il utilise express + stripe + dotenv
- * 2. SANS npm (fallback)   : fonctionne avec les seuls modules natifs Node.js 18+
- *                            (http, fs, path, crypto, fetch natif pour Stripe)
- *
- * Démarrage : npm install && node server.js
- * Ou sans dépendances : node server.js
- */
-
 'use strict';
 
 // ─── Chargement .env ──────────────────────────────────────────────────────────
-try {
-  require('dotenv').config();
-} catch (_) {
-  // dotenv absent : on essaie le chargement natif Node 22+ puis le parsing manuel
-  try {
-    process.loadEnvFile('.env');
-  } catch (_2) {
+try { require('dotenv').config(); } catch (_) {
+  try { process.loadEnvFile('.env'); } catch (_2) {
     try {
-      const fs  = require('fs');
-      const raw = fs.readFileSync('.env', 'utf-8');
+      const fs = require('fs'), raw = fs.readFileSync('.env','utf-8');
       for (const line of raw.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const eqIdx = trimmed.indexOf('=');
-        if (eqIdx === -1) continue;
-        const key = trimmed.slice(0, eqIdx).trim();
-        const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
-        if (key && !(key in process.env)) process.env[key] = val;
+        const t = line.trim(); if (!t || t.startsWith('#')) continue;
+        const i = t.indexOf('='); if (i===-1) continue;
+        const k=t.slice(0,i).trim(), v=t.slice(i+1).trim().replace(/^["']|["']$/g,'');
+        if (k && !(k in process.env)) process.env[k]=v;
       }
-    } catch (_3) { /* .env absent */ }
+    } catch(_3){}
   }
 }
 
-// ─── Tentative de chargement d'Express ────────────────────────────────────────
-let useExpress = false;
-let express;
-try {
-  express = require('express');
-  useExpress = true;
-} catch (_) { /* pas installé */ }
+let useExpress=false, express;
+try { express=require('express'); useExpress=true; } catch(_){}
 
-const fs     = require('fs');
-const http   = require('http');
-const path   = require('path');
-const crypto = require('crypto');
-const { URL } = require('url');
+const fs   = require('fs');
+const http = require('http');
+const path = require('path');
+const { randomUUID } = require('crypto');
 
-const PORT           = parseInt(process.env.PORT || '3000', 10);
-const PRODUCTS_FILE  = path.join(__dirname, 'products.json');
-const PUBLIC_DIR     = path.join(__dirname, 'public');
+const PORT      = parseInt(process.env.PORT||'3000',10);
+const PROD_FILE = path.join(__dirname,'products.json');
+const BASE_URL  = (process.env.BASE_URL||'http://localhost:'+PORT).replace(/\/$/,'');
 
-// ─── Stripe (npm ou fetch natif) ──────────────────────────────────────────────
-let stripe = null;
-const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-const stripeConfigured =
-  STRIPE_KEY && STRIPE_KEY !== 'sk_test_VOTRE_CLE_SECRETE_ICI';
-
-if (stripeConfigured) {
-  try {
-    stripe = require('stripe')(STRIPE_KEY);
-  } catch (_) {
-    // stripe npm absent — on utilisera fetch natif (voir createCheckoutSession)
-    stripe = 'native';
-  }
+// ─── Produits ─────────────────────────────────────────────────────────────────
+function loadProducts() {
+  try { return JSON.parse(fs.readFileSync(PROD_FILE,'utf-8')); } catch(_){ return []; }
+}
+function saveProducts(arr) {
+  fs.writeFileSync(PROD_FILE, JSON.stringify(arr,null,2),'utf-8');
 }
 
-// ─── Helpers produits ──────────────────────────────────────────────────────────
-function readProducts() {
-  try { return JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf-8')); }
-  catch (_) { return []; }
+// ─── Auth admin ───────────────────────────────────────────────────────────────
+const tokens = new Map();
+function makeToken() {
+  const t=randomUUID(); tokens.set(t,Date.now()+3600000); return t;
 }
-function writeProducts(products) {
-  fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf-8');
+function checkToken(t) {
+  if(!t||!tokens.has(t)) return false;
+  if(Date.now()>tokens.get(t)){ tokens.delete(t); return false; }
+  return true;
 }
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-// ─── Tokens admin ─────────────────────────────────────────────────────────────
-const validTokens = new Set();
-
-function checkAuth(authHeader) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
-  return validTokens.has(authHeader.split(' ')[1]);
+function getBearer(req) {
+  const h=req.headers['authorization']||'';
+  return h.startsWith('Bearer ')?h.slice(7):null;
 }
 
-// ─── Stripe via fetch natif ────────────────────────────────────────────────────
-async function createStripeSession(product, baseUrl) {
-  const body = new URLSearchParams({
-    'payment_method_types[0]':                   'card',
-    'line_items[0][price_data][currency]':        'eur',
-    'line_items[0][price_data][unit_amount]':     String(product.price),
-    'line_items[0][price_data][product_data][name]':        product.name,
-    'line_items[0][price_data][product_data][description]': product.description,
-    'line_items[0][quantity]':  '1',
-    'mode':                     'payment',
-    'success_url':              `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-    'cancel_url':               `${baseUrl}/cancel.html`,
-    'metadata[productId]':      product.id,
+// ─── Stripe helpers ───────────────────────────────────────────────────────────
+let stripe=null;
+try { stripe=require('stripe')(process.env.STRIPE_SECRET_KEY); } catch(_){}
+
+async function stripeRequest(method,endpoint,body){
+  const key=process.env.STRIPE_SECRET_KEY||'';
+  const auth='Basic '+Buffer.from(key+':').toString('base64');
+  const res=await fetch('https://api.stripe.com/v1'+endpoint,{
+    method, headers:{ Authorization:auth,'Content-Type':'application/x-www-form-urlencoded' },
+    body:body?new URLSearchParams(body).toString():undefined
   });
-  if (product.image) {
-    body.set('line_items[0][price_data][product_data][images][0]', product.image);
-  }
-
-  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${STRIPE_KEY}`,
-      'Content-Type':  'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'Erreur Stripe');
-  return data;
+  return res.json();
 }
 
-// ─── MIME types pour le serveur statique minimal ──────────────────────────────
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.json': 'application/json',
-  '.png':  'image/png',
-  '.jpg':  'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif':  'image/gif',
-  '.svg':  'image/svg+xml',
-  '.ico':  'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2':'font/woff2',
+// ─── Body parser ────────────────────────────────────────────────────────────
+function readBody(req){
+  return new Promise((resolve,reject)=>{
+    let data='';
+    req.on('data',c=>data+=c);
+    req.on('end',()=>{ try{resolve(JSON.parse(data||'{}'));}catch(e){resolve({});} });
+    req.on('error',reject);
+  });
+}
+
+// ─── Helpers réponse ──────────────────────────────────────────────────────────
+function json(res,status,obj){
+  const b=JSON.stringify(obj);
+  res.writeHead(status,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+  res.end(b);
+}
+
+// ─── CORS preflight ───────────────────────────────────────────────────────────
+function cors(res){
+  res.writeHead(204,{
+    'Access-Control-Allow-Origin':'*',
+    'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers':'Content-Type,Authorization'
+  }); res.end();
+}
+
+// ─── Serve static ─────────────────────────────────────────────────────────────
+const MIME={
+  '.html':'text/html','.css':'text/css','.js':'application/javascript',
+  '.json':'application/json','.png':'image/png','.jpg':'image/jpeg',
+  '.ico':'image/x-icon','.svg':'image/svg+xml','.webp':'image/webp'
 };
+function serveStatic(req,res,urlPath){
+  let p=urlPath==='/'?'/index.html':urlPath;
+  // route produit et panier
+  if(p==='/product'||p.startsWith('/product?')) p='/product.html';
+  if(p==='/cart')    p='/cart.html';
+  const file=path.join(__dirname,'public',p);
+  fs.readFile(file,(err,data)=>{
+    if(err){ res.writeHead(404); res.end('Not found'); return; }
+    const ext=path.extname(file);
+    res.writeHead(200,{'Content-Type':MIME[ext]||'application/octet-stream'});
+    res.end(data);
+  });
+}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MODE EXPRESS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Router ───────────────────────────────────────────────────────────────────
+async function router(req,res){
+  const url=new URL(req.url,'http://localhost');
+  const method=req.method.toUpperCase();
+  const pathname=url.pathname;
 
-if (useExpress) {
-  const app = express();
-  app.use(express.json());
-  app.use(express.static(PUBLIC_DIR));
+  if(method==='OPTIONS') return cors(res);
 
-  // Auth middleware
-  function requireAuth(req, res, next) {
-    if (!checkAuth(req.headers['authorization'])) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-    next();
+  // ── Produits (public) ──────────────────────────────────────────────────────
+  if(pathname==='/api/products' && method==='GET'){
+    return json(res,200,loadProducts());
+  }
+  if(/^\/api\/products\/[^/]+$/.test(pathname) && method==='GET'){
+    const id=pathname.split('/').pop();
+    const p=loadProducts().find(x=>x.id===id);
+    return p?json(res,200,p):json(res,404,{error:'Produit introuvable'});
   }
 
-  // GET /api/products
-  app.get('/api/products', (_req, res) => res.json(readProducts()));
+  // ── Admin login ────────────────────────────────────────────────────────────
+  if(pathname==='/api/admin/login' && method==='POST'){
+    const body=await readBody(req);
+    if(body.password===process.env.ADMIN_PASSWORD)
+      return json(res,200,{token:makeToken()});
+    return json(res,401,{error:'Mot de passe incorrect'});
+  }
 
-  // POST /api/admin/login
-  app.post('/api/admin/login', (req, res) => {
-    const { password } = req.body || {};
-    if (!password || password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
-      return res.status(401).json({ error: 'Mot de passe incorrect' });
-    }
-    const token = crypto.randomBytes(32).toString('hex');
-    validTokens.add(token);
-    setTimeout(() => validTokens.delete(token), 8 * 60 * 60 * 1000);
-    res.json({ token });
-  });
+  // ── CRUD produits (admin) ──────────────────────────────────────────────────
+  if(pathname==='/api/products' && method==='POST'){
+    if(!checkToken(getBearer(req))) return json(res,401,{error:'Non autorisé'});
+    const body=await readBody(req);
+    const products=loadProducts();
+    const p={
+      id:randomUUID(), name:body.name||'', description:body.description||'',
+      descriptionLong:body.descriptionLong||'',
+      price:Number(body.price)||0, salePrice:body.salePrice?Number(body.salePrice):null,
+      images:Array.isArray(body.images)?body.images:(body.image?[body.image]:[]),
+      image:body.images?.[0]||body.image||'', stock:Number(body.stock)||0,
+      allowText:!!body.allowText, allowImage:!!body.allowImage
+    };
+    products.push(p); saveProducts(products);
+    return json(res,201,p);
+  }
+  if(/^\/api\/products\/[^/]+$/.test(pathname) && method==='PUT'){
+    if(!checkToken(getBearer(req))) return json(res,401,{error:'Non autorisé'});
+    const id=pathname.split('/').pop();
+    const body=await readBody(req);
+    const products=loadProducts();
+    const idx=products.findIndex(x=>x.id===id);
+    if(idx===-1) return json(res,404,{error:'Produit introuvable'});
+    products[idx]={
+      ...products[idx], name:body.name||products[idx].name,
+      description:body.description||products[idx].description,
+      descriptionLong:body.descriptionLong!==undefined?body.descriptionLong:products[idx].descriptionLong||'',
+      price:body.price!==undefined?Number(body.price):products[idx].price,
+      salePrice:body.salePrice!==undefined?(body.salePrice?Number(body.salePrice):null):products[idx].salePrice,
+      images:Array.isArray(body.images)?body.images:products[idx].images||[],
+      image:body.images?.[0]||products[idx].image||'',
+      stock:body.stock!==undefined?Number(body.stock):products[idx].stock,
+      allowText:body.allowText!==undefined?!!body.allowText:products[idx].allowText,
+      allowImage:body.allowImage!==undefined?!!body.allowImage:products[idx].allowImage
+    };
+    saveProducts(products);
+    return json(res,200,products[idx]);
+  }
+  if(/^\/api\/products\/[^/]+$/.test(pathname) && method==='DELETE'){
+    if(!checkToken(getBearer(req))) return json(res,401,{error:'Non autorisé'});
+    const id=pathname.split('/').pop();
+    const products=loadProducts();
+    const idx=products.findIndex(x=>x.id===id);
+    if(idx===-1) return json(res,404,{error:'Produit introuvable'});
+    products.splice(idx,1); saveProducts(products);
+    return json(res,200,{success:true});
+  }
 
-  // POST /api/create-checkout-session
-  app.post('/api/create-checkout-session', async (req, res) => {
-    if (!stripeConfigured) {
-      return res.status(503).json({
-        error: 'Stripe non configuré. Ajoutez STRIPE_SECRET_KEY dans votre fichier .env',
+  // ── Checkout Stripe ────────────────────────────────────────────────────────
+  if(pathname==='/api/create-checkout-session' && method==='POST'){
+    const body=await readBody(req);
+    // body.cart = [{productId, quantity, customText, customImageUrl}]
+    const cart=Array.isArray(body.cart)?body.cart:[];
+    if(!cart.length) return json(res,400,{error:'Panier vide'});
+
+    const products=loadProducts();
+    const lineItems=[];
+    for(const item of cart){
+      const p=products.find(x=>x.id===item.productId);
+      if(!p) return json(res,400,{error:`Produit introuvable: ${item.productId}`});
+      const unitAmount=p.salePrice||p.price;
+      lineItems.push({
+        price_data:{ currency:'eur', unit_amount:unitAmount,
+          product_data:{ name:p.name,
+            images:p.images?.length?[p.images[0]]:p.image?[p.image]:[] }
+        }, quantity:item.quantity||1
       });
     }
-    const { productId } = req.body || {};
-    if (!productId) return res.status(400).json({ error: 'productId manquant' });
 
-    const products = readProducts();
-    const product  = products.find(p => p.id === productId);
-    if (!product) return res.status(404).json({ error: 'Produit introuvable' });
-    if (product.stock <= 0) return res.status(400).json({ error: 'Produit en rupture de stock' });
-
-    const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
     try {
       let session;
-      if (stripe && stripe !== 'native') {
-        session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items: [{
-            price_data: {
-              currency: 'eur',
-              product_data: {
-                name: product.name, description: product.description,
-                images: product.image ? [product.image] : [],
-              },
-              unit_amount: product.price,
-            },
-            quantity: 1,
-          }],
-          mode: 'payment',
-          success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url:  `${baseUrl}/cancel.html`,
-          metadata:    { productId: product.id },
+      // Métadonnées de personnalisation
+      const meta={};
+      cart.forEach((item,i)=>{
+        if(item.customText) meta[`item${i}_text`]=String(item.customText).slice(0,250);
+        if(item.customImageUrl) meta[`item${i}_img`]=String(item.customImageUrl).slice(0,500);
+      });
+
+      if(stripe){
+        session=await stripe.checkout.sessions.create({
+          payment_method_types:['card'], line_items:lineItems,
+          mode:'payment', metadata:meta,
+          success_url:`${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url:`${BASE_URL}/cancel`
         });
       } else {
-        session = await createStripeSession(product, baseUrl);
-      }
-      res.json({ url: session.url });
-    } catch (err) {
-      console.error('Erreur Stripe:', err.message);
-      res.status(500).json({ error: 'Erreur lors de la création de la session de paiement' });
-    }
-  });
-
-  // POST /api/products (admin)
-  app.post('/api/products', requireAuth, (req, res) => {
-    const { name, description, price, image, stock } = req.body || {};
-    if (!name || !description || price === undefined) {
-      return res.status(400).json({ error: 'Champs obligatoires manquants : name, description, price' });
-    }
-    const products   = readProducts();
-    const newProduct = {
-      id: generateId(), name: String(name).trim(),
-      description: String(description).trim(), price: parseInt(price, 10),
-      image: image ? String(image).trim() : '', stock: parseInt(stock, 10) || 0,
-    };
-    products.push(newProduct);
-    writeProducts(products);
-    res.status(201).json(newProduct);
-  });
-
-  // PUT /api/products/:id (admin)
-  app.put('/api/products/:id', requireAuth, (req, res) => {
-    const { id } = req.params;
-    const { name, description, price, image, stock } = req.body || {};
-    const products = readProducts();
-    const idx = products.findIndex(p => p.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
-    products[idx] = {
-      ...products[idx],
-      name:        name        !== undefined ? String(name).trim()        : products[idx].name,
-      description: description !== undefined ? String(description).trim() : products[idx].description,
-      price:       price       !== undefined ? parseInt(price, 10)        : products[idx].price,
-      image:       image       !== undefined ? String(image).trim()       : products[idx].image,
-      stock:       stock       !== undefined ? parseInt(stock, 10)        : products[idx].stock,
-    };
-    writeProducts(products);
-    res.json(products[idx]);
-  });
-
-  // DELETE /api/products/:id (admin)
-  app.delete('/api/products/:id', requireAuth, (req, res) => {
-    const { id } = req.params;
-    const products = readProducts();
-    const idx = products.findIndex(p => p.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'Produit introuvable' });
-    const [deleted] = products.splice(idx, 1);
-    writeProducts(products);
-    res.json({ message: 'Produit supprimé', product: deleted });
-  });
-
-  app.get('/admin', (_req, res) =>
-    res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
-
-  app.listen(PORT, startupMessage);
-
-} else {
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MODE FALLBACK — serveur HTTP natif Node.js (zéro dépendance)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  const server = http.createServer(async (req, res) => {
-    const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
-    const pathname  = parsedUrl.pathname;
-    const method    = req.method.toUpperCase();
-
-    // Helper réponse JSON
-    function jsonRes(status, obj) {
-      const body = JSON.stringify(obj);
-      res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
-      res.end(body);
-    }
-
-    // Helper lire le body JSON
-    function readBody() {
-      return new Promise((resolve) => {
-        let data = '';
-        req.on('data', c => data += c);
-        req.on('end', () => {
-          try { resolve(JSON.parse(data || '{}')); }
-          catch (_) { resolve({}); }
+        // Fallback API native
+        const flat={
+          mode:'payment',
+          payment_method_types:['card'],
+          success_url:`${BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url:`${BASE_URL}/cancel`
+        };
+        lineItems.forEach((li,i)=>{
+          flat[`line_items[${i}][price_data][currency]`]='eur';
+          flat[`line_items[${i}][price_data][unit_amount]`]=li.price_data.unit_amount;
+          flat[`line_items[${i}][price_data][product_data][name]`]=li.price_data.product_data.name;
+          if(li.price_data.product_data.images?.[0])
+            flat[`line_items[${i}][price_data][product_data][images][0]`]=li.price_data.product_data.images[0];
+          flat[`line_items[${i}][quantity]`]=li.quantity;
         });
-      });
-    }
-
-    // Auth helper
-    function authOk() { return checkAuth(req.headers['authorization']); }
-
-    // ── API Routes ───────────────────────────────────────────
-    if (pathname === '/api/products' && method === 'GET') {
-      return jsonRes(200, readProducts());
-    }
-
-    if (pathname === '/api/admin/login' && method === 'POST') {
-      const { password } = await readBody();
-      if (!password || password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
-        return jsonRes(401, { error: 'Mot de passe incorrect' });
+        Object.entries(meta).forEach(([k,v])=>{ flat[`metadata[${k}]`]=v; });
+        session=await stripeRequest('POST','/checkout/sessions',flat);
+        if(session.error) return json(res,500,{error:session.error.message});
       }
-      const token = crypto.randomBytes(32).toString('hex');
-      validTokens.add(token);
-      setTimeout(() => validTokens.delete(token), 8 * 60 * 60 * 1000);
-      return jsonRes(200, { token });
+      return json(res,200,{url:session.url});
+    } catch(e){
+      console.error('Stripe error',e.message);
+      return json(res,500,{error:e.message});
     }
-
-    if (pathname === '/api/create-checkout-session' && method === 'POST') {
-      if (!stripeConfigured) {
-        return jsonRes(503, { error: 'Stripe non configuré. Ajoutez STRIPE_SECRET_KEY dans .env' });
-      }
-      const { productId } = await readBody();
-      if (!productId) return jsonRes(400, { error: 'productId manquant' });
-
-      const products = readProducts();
-      const product  = products.find(p => p.id === productId);
-      if (!product)          return jsonRes(404, { error: 'Produit introuvable' });
-      if (product.stock <= 0) return jsonRes(400, { error: 'Produit en rupture de stock' });
-
-      const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
-      try {
-        const session = await createStripeSession(product, baseUrl);
-        return jsonRes(200, { url: session.url });
-      } catch (err) {
-        console.error('Erreur Stripe:', err.message);
-        return jsonRes(500, { error: 'Erreur lors de la création de la session de paiement' });
-      }
-    }
-
-    if (pathname === '/api/products' && method === 'POST') {
-      if (!authOk()) return jsonRes(401, { error: 'Non autorisé' });
-      const { name, description, price, image, stock } = await readBody();
-      if (!name || !description || price === undefined) {
-        return jsonRes(400, { error: 'Champs obligatoires manquants : name, description, price' });
-      }
-      const products   = readProducts();
-      const newProduct = {
-        id: generateId(), name: String(name).trim(),
-        description: String(description).trim(), price: parseInt(price, 10),
-        image: image ? String(image).trim() : '', stock: parseInt(stock, 10) || 0,
-      };
-      products.push(newProduct);
-      writeProducts(products);
-      return jsonRes(201, newProduct);
-    }
-
-    // PUT /api/products/:id
-    const putMatch = pathname.match(/^\/api\/products\/([^/]+)$/);
-    if (putMatch && method === 'PUT') {
-      if (!authOk()) return jsonRes(401, { error: 'Non autorisé' });
-      const id = putMatch[1];
-      const { name, description, price, image, stock } = await readBody();
-      const products = readProducts();
-      const idx = products.findIndex(p => p.id === id);
-      if (idx === -1) return jsonRes(404, { error: 'Produit introuvable' });
-      products[idx] = {
-        ...products[idx],
-        name:        name        !== undefined ? String(name).trim()        : products[idx].name,
-        description: description !== undefined ? String(description).trim() : products[idx].description,
-        price:       price       !== undefined ? parseInt(price, 10)        : products[idx].price,
-        image:       image       !== undefined ? String(image).trim()       : products[idx].image,
-        stock:       stock       !== undefined ? parseInt(stock, 10)        : products[idx].stock,
-      };
-      writeProducts(products);
-      return jsonRes(200, products[idx]);
-    }
-
-    // DELETE /api/products/:id
-    const delMatch = pathname.match(/^\/api\/products\/([^/]+)$/);
-    if (delMatch && method === 'DELETE') {
-      if (!authOk()) return jsonRes(401, { error: 'Non autorisé' });
-      const id = delMatch[1];
-      const products = readProducts();
-      const idx = products.findIndex(p => p.id === id);
-      if (idx === -1) return jsonRes(404, { error: 'Produit introuvable' });
-      const [deleted] = products.splice(idx, 1);
-      writeProducts(products);
-      return jsonRes(200, { message: 'Produit supprimé', product: deleted });
-    }
-
-    // ── Fichiers statiques ───────────────────────────────────
-    let filePath = pathname === '/' ? '/index.html' : pathname;
-    if (pathname === '/admin') filePath = '/admin.html';
-
-    // Sécurisation : interdire les chemins avec ".."
-    const absPath = path.join(PUBLIC_DIR, path.normalize(filePath));
-    if (!absPath.startsWith(PUBLIC_DIR)) {
-      res.writeHead(403); res.end('Forbidden'); return;
-    }
-
-    fs.readFile(absPath, (err, data) => {
-      if (err) {
-        // 404 — servir index.html par défaut
-        fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (e2, d2) => {
-          if (e2) { res.writeHead(404); res.end('Not found'); return; }
-          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-          res.end(d2);
-        });
-        return;
-      }
-      const ext      = path.extname(absPath).toLowerCase();
-      const mimeType = MIME[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': mimeType });
-      res.end(data);
-    });
-  });
-
-  server.listen(PORT, startupMessage);
-}
-
-// ─── Message de démarrage ─────────────────────────────────────────────────────
-function startupMessage() {
-  console.log(`\n L'Atelier Laser — serveur demarré (mode: ${useExpress ? 'Express' : 'natif Node.js'})`);
-  console.log(`  Boutique  : http://localhost:${PORT}`);
-  console.log(`  Admin     : http://localhost:${PORT}/admin`);
-  if (!stripeConfigured) {
-    console.log('\n  Stripe non configure - ajoutez STRIPE_SECRET_KEY dans .env pour activer les paiements');
   }
-  console.log('');
+
+  // ── Static ─────────────────────────────────────────────────────────────────
+  serveStatic(req,res,url.pathname);
 }
+
+// ─── Démarrage serveur ────────────────────────────────────────────────────────
+const server=http.createServer(router);
+server.listen(PORT,()=>{
+  console.log(`✅ L'Atelier Laser — http://localhost:${PORT}`);
+  console.log(`   Mode: ${useExpress?'Express':'Node natif'} | Stripe: ${stripe?'OK':'clé manquante'}`);
+});
