@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "Planche à découper personnalisée",
+    "description": "Planche en bois de hêtre gravée avec le prénom ou message de votre choix. Format 30x20 cm.",
+    "price": 3500,
+    "image": "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400",
+    "stock": 10
+  },
+  {
+    "id": "2",
+    "name": "Porte-clés gravé",
+    "description": "Porte-clés en bois ou acrylique avec gravure personnalisée. Idéal comme cadeau.",
+    "price": 1200,
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400",
+    "stock": 25
+  },
+  {
+    "id": "3",
+    "name": "Cadre photo en bois gravé",
+    "description": "Cadre photo 15x10 cm en bois gravé avec date ou message. Finition naturelle.",
+    "price": 2800,
+    "image": "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=400",
+    "stock": 8
+  }
+]
