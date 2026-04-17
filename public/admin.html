@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration — L'Atelier Laser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="admin-body">
+
+  <!-- ═══ LOGIN ════════════════════════════════════════════ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <h1>L'Atelier Laser</h1>
+        <p>Interface d'administration</p>
+      </div>
+
+      <div class="login-error" id="login-error"></div>
+
+      <form id="login-form" autocomplete="on">
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Entrez le mot de passe"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;" id="login-btn">
+          Se connecter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ APP ADMIN ══════════════════════════════════════════ -->
+  <div id="admin-app">
+
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <div class="admin-title">
+          L'Atelier Laser
+          <span>— Administration</span>
+        </div>
+        <button class="btn-logout" id="btn-logout">Déconnexion</button>
+      </div>
+    </header>
+
+    <main class="admin-main">
+
+      <!-- Section : Ajouter / modifier -->
+      <section class="admin-section">
+        <h2 class="admin-section-title">
+          <span id="form-title">Ajouter un produit</span>
+          <button class="btn btn-secondary btn-sm" id="btn-cancel-edit" style="display:none;">
+            Annuler la modification
+          </button>
+        </h2>
+
+        <form class="product-form" id="product-form" novalidate>
+          <input type="hidden" id="edit-id" />
+
+          <div class="form-group full">
+            <label for="f-name">Nom du produit *</label>
+            <input type="text" id="f-name" placeholder="Ex : Planche à découper personnalisée" required />
+          </div>
+
+          <div class="form-group full">
+            <label for="f-description">Description *</label>
+            <textarea id="f-description" rows="3" placeholder="Décrivez le produit, les matériaux, les dimensions…" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="f-price">Prix (en centimes) *</label>
+            <input type="number" id="f-price" min="0" step="1" placeholder="Ex : 3500 = 35,00 €" required />
+            <span class="form-hint">Saisir le prix en centimes. 3500 = 35,00 €</span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-stock">Stock *</label>
+            <input type="number" id="f-stock" min="0" step="1" placeholder="Quantité disponible" required />
+          </div>
+
+          <div class="form-group full">
+            <label for="f-image">URL de l'image</label>
+            <input type="url" id="f-image" placeholder="https://…" />
+            <span class="form-hint">Lien vers une photo du produit (Unsplash, hébergeur d'image…)</span>
+          </div>
+
+          <!-- Aperçu prix calculé -->
+          <div class="form-group" style="justify-content:flex-end;">
+            <span id="price-preview" style="font-size:0.85rem; color:var(--copper); font-weight:600;"></span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="form-submit-btn">
+              Ajouter le produit
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Section : Liste des produits -->
+      <section class="admin-section">
+        <h2 class="admin-section-title">
+          <span>Produits</span>
+          <span id="product-count" style="font-size:0.85rem; font-weight:400; color:var(--text-light);"></span>
+        </h2>
+
+        <div class="products-table-wrap">
+          <table class="products-table">
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Nom</th>
+                <th>Prix</th>
+                <th style="text-align:center;">Stock</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr>
+                <td colspan="5" class="table-empty">Chargement…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ═══ TOAST ═════════════════════════════════════════════ -->
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <!-- ═══ SCRIPT ════════════════════════════════════════════ -->
+  <script>
+    // ── État ────────────────────────────────────────────────
+    let authToken = sessionStorage.getItem('admin_token') || null;
+    let products = [];
+    let editingId = null;
+
+    const loginScreen  = document.getElementById('login-screen');
+    const adminApp     = document.getElementById('admin-app');
+    const loginForm    = document.getElementById('login-form');
+    const loginError   = document.getElementById('login-error');
+    const loginBtn     = document.getElementById('login-btn');
+    const productForm  = document.getElementById('product-form');
+    const formTitle    = document.getElementById('form-title');
+    const submitBtn    = document.getElementById('form-submit-btn');
+    const cancelBtn    = document.getElementById('btn-cancel-edit');
+    const tbody        = document.getElementById('products-tbody');
+    const productCount = document.getElementById('product-count');
+    const pricePreview = document.getElementById('price-preview');
+    const toastEl      = document.getElementById('admin-toast');
+    let toastTimer;
+
+    // ── Toast ───────────────────────────────────────────────
+    function showToast(msg, type = 'success') {
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.className = `admin-toast ${type}`;
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+    }
+
+    // ── Helpers ─────────────────────────────────────────────
+    function formatPrice(cents) {
+      return (cents / 100).toLocaleString('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      };
+    }
+
+    // ── Auth ────────────────────────────────────────────────
+    function showAdmin() {
+      loginScreen.style.display = 'none';
+      adminApp.style.display = 'block';
+      loadProducts();
+    }
+
+    function showLogin() {
+      loginScreen.style.display = 'flex';
+      adminApp.style.display = 'none';
+      authToken = null;
+      sessionStorage.removeItem('admin_token');
+    }
+
+    if (authToken) {
+      showAdmin();
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      loginError.style.display = 'none';
+      loginBtn.innerHTML = '<span class="spinner"></span> Connexion…';
+      loginBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur de connexion');
+        }
+
+        authToken = data.token;
+        sessionStorage.setItem('admin_token', authToken);
+        showAdmin();
+
+      } catch (err) {
+        loginError.textContent = err.message;
+        loginError.style.display = 'block';
+      } finally {
+        loginBtn.innerHTML = 'Se connecter';
+        loginBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      showLogin();
+    });
+
+    // ── Chargement des produits ──────────────────────────────
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products');
+        products = await res.json();
+        renderTable();
+      } catch {
+        tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Erreur de chargement</td></tr>`;
+      }
+    }
+
+    // ── Rendu tableau ────────────────────────────────────────
+    function renderTable() {
+      productCount.textContent = `(${products.length} produit${products.length > 1 ? 's' : ''})`;
+
+      if (products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Aucun produit — ajoutez-en un ci-dessus.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = products.map(p => {
+        const stockClass = p.stock <= 3 ? 'stock-badge-low' : 'stock-badge-ok';
+        const imgSrc = p.image || 'https://placehold.co/50x40/ede8de/8b5e3c?text=?';
+        return `
+          <tr>
+            <td>
+              <img
+                class="product-thumb"
+                src="${escapeHtml(imgSrc)}"
+                alt="${escapeHtml(p.name)}"
+                onerror="this.src='https://placehold.co/50x40/ede8de/8b5e3c?text=?'"
+              />
+            </td>
+            <td class="product-name-cell" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</td>
+            <td class="price-cell">${formatPrice(p.price)}</td>
+            <td class="stock-cell"><span class="${stockClass}">${p.stock}</span></td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn btn-secondary btn-sm" onclick="startEdit('${p.id}')">Modifier</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Supprimer</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    // ── Preview prix ─────────────────────────────────────────
+    document.getElementById('f-price').addEventListener('input', function () {
+      const val = parseInt(this.value, 10);
+      if (val > 0) {
+        pricePreview.textContent = '→ ' + formatPrice(val);
+      } else {
+        pricePreview.textContent = '';
+      }
+    });
+
+    // ── Soumettre formulaire ─────────────────────────────────
+    productForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name        = document.getElementById('f-name').value.trim();
+      const description = document.getElementById('f-description').value.trim();
+      const price       = parseInt(document.getElementById('f-price').value, 10);
+      const stock       = parseInt(document.getElementById('f-stock').value, 10);
+      const image       = document.getElementById('f-image').value.trim();
+
+      if (!name || !description || isNaN(price) || isNaN(stock)) {
+        showToast('Veuillez remplir tous les champs obligatoires.', 'error');
+        return;
+      }
+
+      if (price < 0 || stock < 0) {
+        showToast('Le prix et le stock doivent être positifs.', 'error');
+        return;
+      }
+
+      const payload = { name, description, price, stock, image };
+      const isEdit = !!editingId;
+      const url    = isEdit ? `/api/products/${editingId}` : '/api/products';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      submitBtn.innerHTML = '<span class="spinner"></span> Enregistrement…';
+      submitBtn.disabled  = true;
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (res.status === 401) {
+          showToast('Session expirée — veuillez vous reconnecter.', 'error');
+          showLogin();
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Erreur serveur');
+        }
+
+        showToast(isEdit ? 'Produit modific� avec succès.' : 'Produit ajouté avec succès.', 'success');
+        cancelEdit();
+        await loadProducts();
+
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = isEdit ? 'Enregistrer les modifications' : 'Ajouter le produit';
+      }
+    });
+
+    // ── Édition ──────────────────────────────────────────────
+    function startEdit(id) {
+      const p = products.find(x => x.id === id);
+      if (!p) return;
+
+      editingId = id;
+      document.getElementById('f-name').value        = p.name;
+      document.getElementById('f-description').value = p.description;
+      document.getElementById('f-price').value       = p.price;
+      document.getElementById('f-stock').value       = p.stock;
+      document.getElementById('f-image').value       = p.image || '';
+      pricePreview.textContent = '→ ' + formatPrice(p.price);
+
+      formTitle.textContent   = 'Modifier le produit';
+      submitBtn.innerHTML     = 'Enregistrer les modifications';
+      cancelBtn.style.display = 'inline-flex';
+
+      // Scroll vers le formulaire
+      document.querySelector('.admin-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function cancelEdit() {
+      editingId = null;
+      productForm.reset();
+      pricePreview.textContent = '';
+      formTitle.textContent    = 'Ajouter un produit';
+      submitBtn.innerHTML      = 'Ajouter le produit';
+      submitBtn.disabled       = false;
+      cancelBtn.style.display  = 'none';
+    }
+
+    cancelBtn.addEventListener('click', cancelEdit);
+
+    // ── Suppression ─────────────────────────────────────────
+    async function deleteProduct(id) {
+      const p = products.find(x => x.id === id);
+      if (!p) return;
+
+      if (!confirm(`Supprimer "${p.name}" ?\n\nCette action est irréversible.`)) return;
+
+      try {
+        const res = await fetch(`/api/products/${id}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
+
+        if (res.status === 401) {
+          showToast('Session expirée — veuillez vous reconnecter.', 'error');
+          showLogin();
+          return;
+        }
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Erreur de suppression');
+        }
+
+        showToast('Produit supprimé.', 'success');
+
+        // Si on était en train de modifier ce produit, annuler
+        if (editingId === id) cancelEdit();
+
+        await loadProducts();
+
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+  </script>
+
+</body>
+  </html>
