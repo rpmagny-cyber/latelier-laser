@@ -3,24 +3,50 @@
     "id": "1",
     "name": "Planche à découper personnalisée",
     "description": "Planche en bois de hêtre gravée avec le prénom ou message de votre choix. Format 30x20 cm.",
+    "descriptionLong": "<p>Offrez ou faites-vous plaisir avec cette magnifique planche à découper en bois de hêtre massif, gravée au laser avec la précision artisanale de L'Atelier Laser.</p><p><strong>Caractéristiques :</strong></p><ul><li>Dimensions : 30 x 20 cm</li><li>Épaisseur : 2 cm</li><li>Matière : Hêtre massif certifié FSC</li><li>Gravure laser haute précision</li><li>Finition à l'huile alimentaire naturelle</li></ul><p>Vous pouvez personnaliser avec un prénom, une date, un message ou même votre logo. La gravure est permanente et résiste à l'humidité.</p><p>Fabriquée à la commande dans notre atelier en France, chaque pièce est unique. Délai de fabrication : 3 à 5 jours ouvrés.</p>",
     "price": 3500,
-    "image": "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400",
-    "stock": 10
+    "salePrice": null,
+    "images": [
+      "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=600",
+      "https://images.unsplash.com/photo-1605522561233-768ad7a8fabf?w=600",
+      "https://images.unsplash.com/photo-1515443961218-a51367888e4b?w=600"
+    ],
+    "image": "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=600",
+    "stock": 10,
+    "allowText": true,
+    "allowImage": false
   },
   {
     "id": "2",
     "name": "Porte-clés gravé",
     "description": "Porte-clés en bois ou acrylique avec gravure personnalisée. Idéal comme cadeau.",
+    "descriptionLong": "<p>Ce porte-clés artisanal est la touche personnalisée idéale pour vous ou à offrir. Gravé au laser avec une précision exceptionnelle dans notre atelier en Bretagne.</p><p><strong>Caractéristiques :</strong></p><ul><li>Dimensions : 5 x 3 cm</li><li>Matière au choix : bois de cerisier ou acrylique teinté</li><li>Anneau inox argenté inclus</li><li>Gravure laser recto ou recto-verso</li></ul><p>Idéal pour : cadeaux d'anniversaire, mariage, naissance, EVJF, comité d'entreprise...</p><p>Commande minimum : 1 pièce. Tarifs dégressifs à partir de 10 pièces.</p>",
     "price": 1200,
-    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400",
-    "stock": 25
+    "salePrice": 990,
+    "images": [
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600",
+      "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=600"
+    ],
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600",
+    "stock": 25,
+    "allowText": true,
+    "allowImage": true
   },
   {
     "id": "3",
     "name": "Cadre photo en bois gravé",
     "description": "Cadre photo 15x10 cm en bois gravé avec date ou message. Finition naturelle.",
+    "descriptionLong": "<p>Sublimez vos plus beaux souvenirs avec ce cadre photo en bois gravé à la main dans notre atelier. Un cadeau original et émouvant pour toutes les occasions.</p><p><strong>Caractéristiques :</strong></p><ul><li>Format photo : 15 x 10 cm (format standard)</li><li>Épaisseur cadre : 1,5 cm</li><li>Matière : bouleau ou noyer selon disponibilité</li><li>Vitre en verre véritable incluse</li><li>Peut être posé ou accroché au mur</li></ul><p>Personnalisez avec une date, un prénom, une citation ou votre message. Vous pouvez également envoyer une photo ou un dessin à graver directement sur le cadre.</p><p>Chaque cadre est fabriqué à la commande — comptez 5 à 7 jours ouvrés.</p>",
     "price": 2800,
-    "image": "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=400",
-    "stock": 8
+    "salePrice": null,
+    "images": [
+      "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=600",
+      "https://images.unsplash.com/photo-1541643600914-78b084683702?w=600",
+      "https://images.unsplash.com/photo-1560942485-b2a11cc13456?w=600"
+    ],
+    "image": "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=600",
+    "stock": 8,
+    "allowText": true,
+    "allowImage": true
   }
 ]
