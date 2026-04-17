@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commande confirmée — L'Atelier Laser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <div class="result-page">
+    <div class="result-card">
+      <div class="result-icon success-icon">✅</div>
+      <h1>Merci pour votre commande !</h1>
+      <p>
+        Votre paiement a bien été recu. Julien Mélis va préparer votre création
+        avec soin et vous l'expédier dans les meilleurs délais.
+      </p>
+      <p>
+        Un email de confirmation vous a été envoyé par Stripe. Conservez-le
+        pour le suivi de votre commande.
+      </p>
+      <p id="session-info"></p>
+      <a href="/" class="btn-back">← Retour à la boutique</a>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (sessionId) {
+      document.getElementById('session-info').innerHTML =
+        `<span class="result-id">Référence : ${sessionId}</span>`;
+    }
+  </script>
+
+</body>
