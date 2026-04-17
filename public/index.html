@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>L'Atelier Laser — Gravures personnalisées sur-mesure</title>
+  <meta name="description" content="Objets en bois gravés au laser : planches à découper, porte-clés, cadres photo personnalisés. Artisan Julien Mélis." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-title">L'Atelier Laser</span>
+        <span class="logo-subtitle">Gravures personnalisées sur-mesure</span>
+      </a>
+      <span class="header-badge">
+        <span>✦</span>
+        <span>Artisan créateur</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- ═══ HERO ══════════════════════════════════════════ -->
+  <section class="hero">
+    <p class="hero-tag">Fait main · Gravé avec soin</p>
+    <h1>Offrez un <span>objet unique</span>,<br>gravé pour l'éternité</h1>
+    <p>
+      Chaque pièce est fabriquée à la commande dans l'atelier de Julien Mélis.
+      Bois, acrylique, métal — sublimés par la précision du laser.
+    </p>
+    <a href="#catalogue" class="hero-cta">
+      <span>Découvrir la boutique</span>
+      <span>↓</span>
+    </a>
+  </section>
+
+  <!-- ═══ FEATURES ══════════════════════════════════════════ -->
+  <div class="features-strip">
+    <div class="features-inner">
+      <div class="feature-item">
+        <span class="feature-icon">🎁</span>
+        <span>Idéal cadeau</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">✂️</span>
+        <span>Personnalisation sur-mesure</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">🚚</span>
+        <span>Expédition soignée</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">🔒</span>
+        <span>Paiement sécurisé</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CATALOGUE ═════════════════════════════════════════ -->
+  <section class="catalogue" id="catalogue">
+    <div class="catalogue-header">
+      <h2>Nos créations</h2>
+      <p>Chaque produit peut être personnalisé selon vos envies</p>
+      <div class="catalogue-divider"></div>
+    </div>
+
+    <div class="products-grid" id="products-grid">
+      <!-- Les produits sont chargés dynamiquement -->
+      <div class="empty-state">
+        <div class="spinner" style="display:inline-block; width:2rem; height:2rem; border-color:rgba(139,94,60,0.2); border-top-color:var(--copper);"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="footer-logo">L'Atelier Laser</div>
+    <p class="footer-text">
+      Artisan créateur · Julien Mélis<br>
+      Gravures personnalisées sur bois, acrylique et métal<br>
+      <a href="/admin">Espace administration</a>
+    </p>
+  </footer>
+
+  <!-- ═══ TOAST ═════════════════════════════════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══ SCRIPT ════════════════════════════════════════════ -->
+  <script>
+    const grid = document.getElementById('products-grid');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(message, isError = false) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.className = 'toast' + (isError ? ' error' : '');
+      // Force reflow for animation restart
+      void toast.offsetWidth;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    function formatPrice(cents) {
+      return (cents / 100).toLocaleString('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+      });
+    }
+
+    function renderProducts(products) {
+      if (!products || products.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🪵</div>
+            <h3>Aucun produit disponible</h3>
+            <p>Revenez bientôt, de nouvelles créations arrivent !</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = products.map(p => {
+        const outOfStock = p.stock <= 0;
+        return `
+          <article class="product-card${outOfStock ? ' out-of-stock' : ''}">
+            <div class="product-image-wrap">
+              <img
+                src="${p.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400'}"
+                alt="${escapeHtml(p.name)}"
+                loading="lazy"
+                onerror="this.src='https://placehold.co/400x300/ede8de/8b5e3c?text=Photo+bientôt'"
+              />
+              ${outOfStock ? '<span class="stock-badge">Épuisé</span>' : ''}
+            </div>
+            <div class="product-body">
+              <h3 class="product-name">${escapeHtml(p.name)}</h3>
+              <p class="product-description">${escapeHtml(p.description)}</p>
+              <div class="product-footer">
+                <span class="product-price">${formatPrice(p.price)}</span>
+                <button
+                  class="btn-buy"
+                  onclick="buyProduct('${p.id}', this)"
+                  ${outOfStock ? 'disabled' : ''}
+                  aria-label="Acheter ${escapeHtml(p.name)}"
+                >
+                  ${outOfStock ? 'Épuisé' : '🛒 Acheter'}
+                </button>
+              </div>
+            </div>
+          </article>`;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function buyProduct(productId, btn) {
+      const originalContent = btn.innerHTML;
+      btn.classList.add('loading');
+      btn.innerHTML = '<span class="spinner"></span> Redirection...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur lors de la création du paiement');
+        }
+
+        // Redirection vers Stripe Checkout
+        window.location.href = data.url;
+
+      } catch (err) {
+        showToast(err.message, true);
+        btn.classList.remove('loading');
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+      }
+    }
+
+    // Chargement des produits au démarrage
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products');
+        if (!res.ok) throw new Error('Erreur de chargement');
+        const products = await res.json();
+        renderProducts(products);
+      } catch (err) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <h3>Impossible de charger les produits</h3>
+            <p>Veuillez rafraîchir la page.</p>
+          </div>`;
+      }
+    }
+
+    loadProducts();
+  </script>
+
+</body>
+</html>
