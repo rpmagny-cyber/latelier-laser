@@ -17,22 +17,17 @@
         <h1>L'Atelier Laser</h1>
         <p>Interface d'administration</p>
       </div>
-
       <div class="login-error" id="login-error"></div>
-
       <form id="login-form" autocomplete="on">
         <div class="form-group">
           <label for="password">Mot de passe</label>
           <input
-            type="password"
-            id="password"
-            name="password"
+            type="password" id="password" name="password"
             placeholder="Entrez le mot de passe"
-            autocomplete="current-password"
-            required
+            autocomplete="current-password" required
           />
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;" id="login-btn">
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="login-btn">
           Se connecter
         </button>
       </form>
@@ -46,8 +41,7 @@
     <header class="admin-header">
       <div class="admin-header-inner">
         <div class="admin-title">
-          L'Atelier Laser
-          <span>— Administration</span>
+          L'Atelier Laser <span>— Administration</span>
         </div>
         <button class="btn-logout" id="btn-logout">Déconnexion</button>
       </div>
@@ -67,36 +61,75 @@
         <form class="product-form" id="product-form" novalidate>
           <input type="hidden" id="edit-id" />
 
+          <!-- Nom -->
           <div class="form-group full">
             <label for="f-name">Nom du produit *</label>
             <input type="text" id="f-name" placeholder="Ex : Planche à découper personnalisée" required />
           </div>
 
+          <!-- Description courte -->
           <div class="form-group full">
-            <label for="f-description">Description *</label>
-            <textarea id="f-description" rows="3" placeholder="Décrivez le produit, les matériaux, les dimensions…" required></textarea>
+            <label for="f-description">Description courte *</label>
+            <textarea id="f-description" rows="2" placeholder="Résumé affiché dans la liste des produits" required></textarea>
           </div>
 
+          <!-- Description longue -->
+          <div class="form-group full">
+            <label for="f-description-long">Description détaillée (HTML autorisé)</label>
+            <textarea id="f-description-long" rows="6" placeholder="&lt;p&gt;Description complète, caractéristiques, dimensions…&lt;/p&gt;"></textarea>
+            <span class="form-hint">Peut contenir du HTML : &lt;p&gt;, &lt;ul&gt;, &lt;strong&gt;, etc.</span>
+          </div>
+
+          <!-- Prix normal -->
           <div class="form-group">
-            <label for="f-price">Prix (en centimes) *</label>
+            <label for="f-price">Prix normal (centimes) *</label>
             <input type="number" id="f-price" min="0" step="1" placeholder="Ex : 3500 = 35,00 €" required />
-            <span class="form-hint">Saisir le prix en centimes. 3500 = 35,00 €</span>
+            <span class="form-hint">3500 = 35,00 €</span>
           </div>
 
+          <!-- Prix promo -->
+          <div class="form-group">
+            <label for="f-sale-price">Prix promotionnel (centimes)</label>
+            <input type="number" id="f-sale-price" min="0" step="1" placeholder="Laisser vide si pas de promo" />
+            <span class="form-hint">Si renseigné, apparaît en rouge avec l'ancien prix barré</span>
+          </div>
+
+          <!-- Prix prévisualisé -->
+          <div class="form-group" style="justify-content:flex-end; align-self:end;">
+            <span id="price-preview" style="font-size:0.85rem; color:var(--copper); font-weight:600;"></span>
+          </div>
+
+          <!-- Stock -->
           <div class="form-group">
             <label for="f-stock">Stock *</label>
             <input type="number" id="f-stock" min="0" step="1" placeholder="Quantité disponible" required />
           </div>
 
+          <!-- Images URLs -->
           <div class="form-group full">
-            <label for="f-image">URL de l'image</label>
-            <input type="url" id="f-image" placeholder="https://…" />
-            <span class="form-hint">Lien vers une photo du produit (Unsplash, hébergeur d'image…)</span>
+            <label>Images (URLs)</label>
+            <div class="images-list" id="images-list">
+              <!-- Rempli dynamiquement -->
+            </div>
+            <button type="button" class="btn-add-img" id="btn-add-img" onclick="addImageRow()">
+              + Ajouter une image
+            </button>
+            <span class="form-hint">Première image = image principale. Liens Unsplash, hébergeur d'image…</span>
           </div>
 
-          <!-- Aperçu prix calculé -->
-          <div class="form-group" style="justify-content:flex-end;">
-            <span id="price-preview" style="font-size:0.85rem; color:var(--copper); font-weight:600;"></span>
+          <!-- Personnalisation -->
+          <div class="form-group">
+            <label>Options de personnalisation</label>
+            <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.2rem;">
+              <div class="checkbox-group">
+                <input type="checkbox" id="f-allow-text" />
+                <label for="f-allow-text">Autoriser la saisie d'un texte personnalisé (250 caract. max)</label>
+              </div>
+              <div class="checkbox-group">
+                <input type="checkbox" id="f-allow-image" />
+                <label for="f-allow-image">Autoriser l'envoi d'une image / logo (URL)</label>
+              </div>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -111,7 +144,7 @@
       <section class="admin-section">
         <h2 class="admin-section-title">
           <span>Produits</span>
-          <span id="product-count" style="font-size:0.85rem; font-weight:400; color:var(--text-light);"></span>
+          <span id="product-count" style="font-size:0.85rem;font-weight:400;color:var(--text-light);"></span>
         </h2>
 
         <div class="products-table-wrap">
@@ -122,13 +155,12 @@
                 <th>Nom</th>
                 <th>Prix</th>
                 <th style="text-align:center;">Stock</th>
+                <th>Perso.</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="products-tbody">
-              <tr>
-                <td colspan="5" class="table-empty">Chargement…</td>
-              </tr>
+              <tr><td colspan="6" class="table-empty">Chargement…</td></tr>
             </tbody>
           </table>
         </div>
@@ -144,7 +176,7 @@
   <script>
     // ── État ────────────────────────────────────────────────
     let authToken = sessionStorage.getItem('admin_token') || null;
-    let products = [];
+    let products  = [];
     let editingId = null;
 
     const loginScreen  = document.getElementById('login-screen');
@@ -166,7 +198,7 @@
     function showToast(msg, type = 'success') {
       clearTimeout(toastTimer);
       toastEl.textContent = msg;
-      toastEl.className = `admin-toast ${type}`;
+      toastEl.className   = `admin-toast ${type}`;
       void toastEl.offsetWidth;
       toastEl.classList.add('show');
       toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
@@ -174,89 +206,104 @@
 
     // ── Helpers ─────────────────────────────────────────────
     function formatPrice(cents) {
-      return (cents / 100).toLocaleString('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 2,
-      });
+      return (cents / 100).toLocaleString('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
     }
 
     function escapeHtml(str) {
       return String(str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     function authHeaders() {
-      return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      };
+      return { 'Content-Type':'application/json', 'Authorization':`Bearer ${authToken}` };
     }
+
+    // ── Gestion images ───────────────────────────────────────
+    function addImageRow(value = '') {
+      const list = document.getElementById('images-list');
+      const row  = document.createElement('div');
+      row.className = 'image-input-row';
+      row.innerHTML = `
+        <input type="url" placeholder="https://… (URL de l'image)" value="${escapeHtml(value)}" />
+        <button type="button" class="btn-remove-img" onclick="this.parentElement.remove()" aria-label="Supprimer">×</button>`;
+      list.appendChild(row);
+    }
+
+    window.addImageRow = addImageRow;
+
+    function getImages() {
+      return Array.from(document.querySelectorAll('#images-list input[type="url"]'))
+        .map(i => i.value.trim())
+        .filter(Boolean);
+    }
+
+    // ── Prix live preview ────────────────────────────────────
+    function updatePricePreview() {
+      const price     = parseInt(document.getElementById('f-price').value, 10);
+      const salePrice = parseInt(document.getElementById('f-sale-price').value, 10);
+      if (price > 0 && salePrice > 0 && salePrice < price) {
+        pricePreview.innerHTML = `→ <span style="text-decoration:line-through;color:#999;">${formatPrice(price)}</span> <span style="color:var(--red);">${formatPrice(salePrice)}</span>`;
+      } else if (price > 0) {
+        pricePreview.textContent = `→ ${formatPrice(price)}`;
+      } else {
+        pricePreview.textContent = '';
+      }
+    }
+
+    document.getElementById('f-price').addEventListener('input', updatePricePreview);
+    document.getElementById('f-sale-price').addEventListener('input', updatePricePreview);
 
     // ── Auth ────────────────────────────────────────────────
     function showAdmin() {
       loginScreen.style.display = 'none';
-      adminApp.style.display = 'block';
+      adminApp.style.display    = 'block';
+      resetForm();
       loadProducts();
     }
 
     function showLogin() {
       loginScreen.style.display = 'flex';
-      adminApp.style.display = 'none';
+      adminApp.style.display    = 'none';
       authToken = null;
       sessionStorage.removeItem('admin_token');
     }
 
-    if (authToken) {
-      showAdmin();
-    }
+    if (authToken) showAdmin();
 
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const password = document.getElementById('password').value;
       loginError.style.display = 'none';
       loginBtn.innerHTML = '<span class="spinner"></span> Connexion…';
-      loginBtn.disabled = true;
+      loginBtn.disabled  = true;
 
       try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        });
-
+        const res  = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password }) });
         const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Erreur de connexion');
-        }
-
+        if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
         authToken = data.token;
         sessionStorage.setItem('admin_token', authToken);
         showAdmin();
-
       } catch (err) {
-        loginError.textContent = err.message;
-        loginError.style.display = 'block';
+        loginError.textContent    = err.message;
+        loginError.style.display  = 'block';
       } finally {
         loginBtn.innerHTML = 'Se connecter';
-        loginBtn.disabled = false;
+        loginBtn.disabled  = false;
       }
     });
 
-    document.getElementById('btn-logout').addEventListener('click', () => {
-      showLogin();
-    });
+    document.getElementById('btn-logout').addEventListener('click', showLogin);
 
     // ── Chargement des produits ──────────────────────────────
     async function loadProducts() {
       try {
         const res = await fetch('/api/products');
-        products = await res.json();
+        products  = await res.json();
         renderTable();
       } catch {
-        tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Erreur de chargement</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Erreur de chargement</td></tr>`;
       }
     }
 
@@ -265,26 +312,34 @@
       productCount.textContent = `(${products.length} produit${products.length > 1 ? 's' : ''})`;
 
       if (products.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Aucun produit — ajoutez-en un ci-dessus.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Aucun produit — ajoutez-en un ci-dessus.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = products.map(p => {
+        const imgSrc     = (p.images && p.images[0]) || p.image || '';
         const stockClass = p.stock <= 3 ? 'stock-badge-low' : 'stock-badge-ok';
-        const imgSrc = p.image || 'https://placehold.co/50x40/ede8de/8b5e3c?text=?';
+        const hasPromo   = p.salePrice && p.salePrice < p.price;
+
+        const priceCell = hasPromo
+          ? `<span class="sale">${formatPrice(p.salePrice)}</span> <span class="original-crossed">${formatPrice(p.price)}</span>`
+          : formatPrice(p.price);
+
+        const persoIcons = [
+          p.allowText  ? '✏️' : '',
+          p.allowImage ? '🖼️' : '',
+        ].filter(Boolean).join(' ') || '—';
+
         return `
           <tr>
             <td>
-              <img
-                class="product-thumb"
-                src="${escapeHtml(imgSrc)}"
-                alt="${escapeHtml(p.name)}"
-                onerror="this.src='https://placehold.co/50x40/ede8de/8b5e3c?text=?'"
-              />
+              <img class="product-thumb" src="${escapeHtml(imgSrc || 'https://placehold.co/50x40/ede8de/8b5e3c?text=?')}"
+                alt="${escapeHtml(p.name)}" onerror="this.src='https://placehold.co/50x40/ede8de/8b5e3c?text=?'" />
             </td>
             <td class="product-name-cell" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</td>
-            <td class="price-cell">${formatPrice(p.price)}</td>
+            <td class="price-cell">${priceCell}</td>
             <td class="stock-cell"><span class="${stockClass}">${p.stock}</span></td>
+            <td style="font-size:1rem;">${persoIcons}</td>
             <td>
               <div class="actions-cell">
                 <button class="btn btn-secondary btn-sm" onclick="startEdit('${p.id}')">Modifier</button>
@@ -295,71 +350,57 @@
       }).join('');
     }
 
-    // ── Preview prix ─────────────────────────────────────────
-    document.getElementById('f-price').addEventListener('input', function () {
-      const val = parseInt(this.value, 10);
-      if (val > 0) {
-        pricePreview.textContent = '→ ' + formatPrice(val);
-      } else {
-        pricePreview.textContent = '';
-      }
-    });
-
-    // ── Soumettre formulaire ─────────────────────────────────
+    // ── Formulaire ───────────────────────────────────────────
     productForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const name        = document.getElementById('f-name').value.trim();
-      const description = document.getElementById('f-description').value.trim();
-      const price       = parseInt(document.getElementById('f-price').value, 10);
-      const stock       = parseInt(document.getElementById('f-stock').value, 10);
-      const image       = document.getElementById('f-image').value.trim();
+      const name            = document.getElementById('f-name').value.trim();
+      const description     = document.getElementById('f-description').value.trim();
+      const descriptionLong = document.getElementById('f-description-long').value.trim();
+      const price           = parseInt(document.getElementById('f-price').value, 10);
+      const salePriceRaw    = document.getElementById('f-sale-price').value.trim();
+      const salePrice       = salePriceRaw ? parseInt(salePriceRaw, 10) : null;
+      const stock           = parseInt(document.getElementById('f-stock').value, 10);
+      const images          = getImages();
+      const allowText       = document.getElementById('f-allow-text').checked;
+      const allowImage      = document.getElementById('f-allow-image').checked;
 
       if (!name || !description || isNaN(price) || isNaN(stock)) {
         showToast('Veuillez remplir tous les champs obligatoires.', 'error');
         return;
       }
-
       if (price < 0 || stock < 0) {
         showToast('Le prix et le stock doivent être positifs.', 'error');
         return;
       }
+      if (salePrice !== null && (isNaN(salePrice) || salePrice >= price)) {
+        showToast('Le prix promotionnel doit être inférieur au prix normal.', 'error');
+        return;
+      }
 
-      const payload = { name, description, price, stock, image };
-      const isEdit = !!editingId;
-      const url    = isEdit ? `/api/products/${editingId}` : '/api/products';
-      const method = isEdit ? 'PUT' : 'POST';
+      const payload = { name, description, descriptionLong, price, salePrice, stock, images, allowText, allowImage };
+      const isEdit  = !!editingId;
+      const url     = isEdit ? `/api/products/${editingId}` : '/api/products';
+      const method  = isEdit ? 'PUT' : 'POST';
 
       submitBtn.innerHTML = '<span class="spinner"></span> Enregistrement…';
       submitBtn.disabled  = true;
 
       try {
-        const res = await fetch(url, {
-          method,
-          headers: authHeaders(),
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
 
-        if (res.status === 401) {
-          showToast('Session expirée — veuillez vous reconnecter.', 'error');
-          showLogin();
-          return;
-        }
+        if (res.status === 401) { showToast('Session expirée.', 'error'); showLogin(); return; }
+        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erreur serveur'); }
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Erreur serveur');
-        }
-
-        showToast(isEdit ? 'Produit modific� avec succès.' : 'Produit ajouté avec succès.', 'success');
+        showToast(isEdit ? 'Produit modifié avec succès.' : 'Produit ajouté avec succès.', 'success');
         cancelEdit();
         await loadProducts();
 
       } catch (err) {
         showToast(err.message, 'error');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = isEdit ? 'Enregistrer les modifications' : 'Ajouter le produit';
+        submitBtn.disabled  = false;
+        submitBtn.innerHTML = editingId ? 'Enregistrer les modifications' : 'Ajouter le produit';
       }
     });
 
@@ -369,69 +410,73 @@
       if (!p) return;
 
       editingId = id;
-      document.getElementById('f-name').value        = p.name;
-      document.getElementById('f-description').value = p.description;
-      document.getElementById('f-price').value       = p.price;
-      document.getElementById('f-stock').value       = p.stock;
-      document.getElementById('f-image').value       = p.image || '';
-      pricePreview.textContent = '→ ' + formatPrice(p.price);
+      document.getElementById('f-name').value             = p.name;
+      document.getElementById('f-description').value      = p.description;
+      document.getElementById('f-description-long').value = p.descriptionLong || '';
+      document.getElementById('f-price').value            = p.price;
+      document.getElementById('f-sale-price').value       = p.salePrice || '';
+      document.getElementById('f-stock').value            = p.stock;
+      document.getElementById('f-allow-text').checked     = !!p.allowText;
+      document.getElementById('f-allow-image').checked    = !!p.allowImage;
 
+      // Images
+      const list = document.getElementById('images-list');
+      list.innerHTML = '';
+      const imgs = (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []);
+      imgs.forEach(url => addImageRow(url));
+      if (!imgs.length) addImageRow();
+
+      updatePricePreview();
       formTitle.textContent   = 'Modifier le produit';
       submitBtn.innerHTML     = 'Enregistrer les modifications';
       cancelBtn.style.display = 'inline-flex';
 
-      // Scroll vers le formulaire
-      document.querySelector('.admin-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelector('.admin-section').scrollIntoView({ behavior:'smooth', block:'start' });
     }
 
     function cancelEdit() {
       editingId = null;
+      resetForm();
+    }
+
+    function resetForm() {
       productForm.reset();
+      editingId             = null;
       pricePreview.textContent = '';
-      formTitle.textContent    = 'Ajouter un produit';
-      submitBtn.innerHTML      = 'Ajouter le produit';
-      submitBtn.disabled       = false;
-      cancelBtn.style.display  = 'none';
+      formTitle.textContent  = 'Ajouter un produit';
+      submitBtn.innerHTML    = 'Ajouter le produit';
+      submitBtn.disabled     = false;
+      cancelBtn.style.display = 'none';
+      // Remettre une ligne image vide
+      const list = document.getElementById('images-list');
+      list.innerHTML = '';
+      addImageRow();
     }
 
     cancelBtn.addEventListener('click', cancelEdit);
 
-    // ── Suppression ─────────────────────────────────────────
+    // ── Suppression ──────────────────────────────────────────
     async function deleteProduct(id) {
       const p = products.find(x => x.id === id);
       if (!p) return;
-
       if (!confirm(`Supprimer "${p.name}" ?\n\nCette action est irréversible.`)) return;
 
       try {
-        const res = await fetch(`/api/products/${id}`, {
-          method: 'DELETE',
-          headers: authHeaders(),
-        });
-
-        if (res.status === 401) {
-          showToast('Session expirée — veuillez vous reconnecter.', 'error');
-          showLogin();
-          return;
-        }
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Erreur de suppression');
-        }
-
+        const res = await fetch(`/api/products/${id}`, { method:'DELETE', headers: authHeaders() });
+        if (res.status === 401) { showToast('Session expirée.', 'error'); showLogin(); return; }
+        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erreur de suppression'); }
         showToast('Produit supprimé.', 'success');
-
-        // Si on était en train de modifier ce produit, annuler
         if (editingId === id) cancelEdit();
-
         await loadProducts();
-
       } catch (err) {
         showToast(err.message, 'error');
       }
     }
+
+    // ── Init ─────────────────────────────────────────────────
+    // Ajouter une ligne image vide au départ (avant login)
+    addImageRow();
   </script>
 
 </body>
-  </html>
+</html>
