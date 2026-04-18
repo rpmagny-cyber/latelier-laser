@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produit — L'Atelier Laser</title>
+  <meta name="description" content="Gravure laser personnalisée sur-mesure. Artisan Julien Mélis." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ═══ TRUST STRIP ══════════════════════════════════════ -->
+  <div class="trust-strip">
+    <div class="trust-inner">
+      <div class="trust-item"><span>🔒</span><span>Paiement <strong>100 % sécurisé</strong> via Stripe</span></div>
+      <div class="trust-item"><span>🚚</span><span><strong>Livraison rapide</strong> &amp; soignée</span></div>
+      <div class="trust-item"><span>🇫🇷</span><span><strong>Conçu &amp; fabriqué</strong> en France</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-title">L'Atelier Laser</span>
+        <span class="logo-subtitle">Gravures personnalisées sur-mesure</span>
+      </a>
+      <div class="header-right">
+        <span class="header-badge">
+          <span>✦</span>
+          <span>Artisan créateur</span>
+        </span>
+        <a href="/cart" class="cart-btn" id="cart-btn" aria-label="Mon panier">
+          🛒
+          <span>Panier</span>
+          <span class="cart-count hidden" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ CONTENU PRODUIT ═══════════════════════════════════ -->
+  <main class="product-page" id="product-page">
+    <!-- Chargement -->
+    <div id="loading-state" style="text-align:center; padding:4rem;">
+      <div class="spinner" style="display:inline-block;width:2.5rem;height:2.5rem;border-color:rgba(139,94,60,0.2);border-top-color:var(--copper);"></div>
+    </div>
+  </main>
+
+  <!-- ═══ FOOTER ════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="footer-logo">L'Atelier Laser</div>
+    <p class="footer-text">
+      Artisan créateur · Julien Mélis<br>
+      Gravures personnalisées sur bois, acrylique et métal
+    </p>
+  </footer>
+
+  <!-- ═══ TOAST ═════════════════════════════════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══ SCRIPT ════════════════════════════════════════════ -->
+  <script>
+    // ── Helpers ─────────────────────────────────────────────
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    function formatPrice(cents) {
+      return (cents / 100).toLocaleString('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
+    }
+
+    // ── Toast ───────────────────────────────────────────────
+    const toastEl = document.getElementById('toast');
+    let toastTimer;
+    function showToast(msg, type = '') {
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.className = 'toast' + (type ? ' ' + type : '');
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    // ── Panier ──────────────────────────────────────────────
+    function getCart() {
+      try { return JSON.parse(sessionStorage.getItem('cart') || '[]'); } catch { return []; }
+    }
+
+    function saveCart(cart) {
+      sessionStorage.setItem('cart', JSON.stringify(cart));
+      updateCartBadge();
+    }
+
+    function updateCartBadge() {
+      const cart  = getCart();
+      const total = cart.reduce((s, i) => s + (i.quantity || 1), 0);
+      const badge = document.getElementById('cart-count');
+      if (total > 0) {
+        badge.textContent = total;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    updateCartBadge();
+
+    // ── Galerie ──────────────────────────────────────────────
+    let currentIdx = 0;
+    let galleryImages = [];
+
+    function renderGallery(images) {
+      galleryImages = images;
+      currentIdx = 0;
+      const mainImg = document.getElementById('gallery-main-img');
+      if (mainImg) mainImg.src = images[0] || '';
+
+      const thumbsWrap = document.getElementById('gallery-thumbs');
+      if (!thumbsWrap) return;
+
+      if (images.length <= 1) {
+        thumbsWrap.innerHTML = '';
+        document.querySelectorAll('.gallery-nav').forEach(b => b.classList.add('hidden'));
+        return;
+      }
+
+      thumbsWrap.innerHTML = images.map((url, i) => `
+        <div class="gallery-thumb${i === 0 ? ' active' : ''}" onclick="setGalleryImg(${i})" style="cursor:pointer;">
+          <img src="${escapeHtml(url)}" alt="Photo ${i+1}" loading="lazy"
+               onerror="this.src='https://placehold.co/72x56/ede8de/8b5e3c?text=?'" />
+        </div>`).join('');
+
+      document.querySelectorAll('.gallery-nav').forEach(b => b.classList.remove('hidden'));
+    }
+
+    function setGalleryImg(idx) {
+      currentIdx = Math.max(0, Math.min(idx, galleryImages.length - 1));
+      const mainImg = document.getElementById('gallery-main-img');
+      if (mainImg) mainImg.src = galleryImages[currentIdx];
+      document.querySelectorAll('.gallery-thumb').forEach((t, i) => {
+        t.classList.toggle('active', i === currentIdx);
+      });
+    }
+
+    window.setGalleryImg = setGalleryImg;
+
+    // ── Rendu produit ────────────────────────────────────────
+    function renderProduct(p) {
+      const main = document.getElementById('product-page');
+      const hasPromo   = p.salePrice && p.salePrice < p.price;
+      const images     = (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []);
+      const displayImg = images[0] || 'https://placehold.co/600x450/ede8de/8b5e3c?text=Photo+bientôt';
+
+      const priceHtml = hasPromo
+        ? `<span class="product-detail-price is-promo">${formatPrice(p.salePrice)}</span>
+           <span class="product-detail-price-old">${formatPrice(p.price)}</span>
+           <span class="promo-pill">Promo !</span>`
+        : `<span class="product-detail-price">${formatPrice(p.price)}</span>`;
+
+      const persoText = p.allowText ? `
+        <div class="perso-field">
+          <label for="custom-text">✏️ Votre texte de personnalisation</label>
+          <textarea
+            id="custom-text"
+            maxlength="250"
+            placeholder="Prénom, date, message, citation…"
+            oninput="updateCounter(this)"
+            rows="3"
+          ></textarea>
+          <div class="perso-counter" id="text-counter">0 / 250 caractères</div>
+        </div>` : '';
+
+      const persoImg = p.allowImage ? `
+        <div class="perso-field">
+          <label for="custom-img">🖼️ URL de votre image ou logo (optionnel)</label>
+          <input
+            type="url"
+            id="custom-img"
+            placeholder="https://… (lien vers votre image)"
+          />
+          <p class="perso-hint">Partagez un lien vers votre image (Google Drive, Dropbox, WeTransfer…)</p>
+        </div>` : '';
+
+      const hasPerso = p.allowText || p.allowImage;
+
+      const persoSection = hasPerso ? `
+        <div class="personalization">
+          <h3>🎨 Personnalisation</h3>
+          ${persoText}
+          ${persoImg}
+        </div>` : '';
+
+      const longDesc = p.descriptionLong ? `
+        <section class="product-long-desc">
+          <h2>Description détaillée</h2>
+          <div class="long-desc-content">${p.descriptionLong}</div>
+        </section>` : '';
+
+      main.innerHTML = `
+        <!-- Fil d'Ariane -->
+        <nav class="breadcrumb">
+          <a href="/">Boutique</a>
+          <span>/</span>
+          <span>${escapeHtml(p.name)}</span>
+        </nav>
+
+        <!-- Détail produit -->
+        <div class="product-detail">
+
+          <!-- Galerie -->
+          <div class="gallery">
+            <div class="gallery-main">
+              <img
+                id="gallery-main-img"
+                src="${escapeHtml(displayImg)}"
+                alt="${escapeHtml(p.name)}"
+                onerror="this.src='https://placehold.co/600x450/ede8de/8b5e3c?text=Photo+bientôt'"
+              />
+              <button class="gallery-nav prev hidden" onclick="setGalleryImg(${0} - 1 + galleryImages.length - 1 < 0 ? 0 : currentIdx - 1)" aria-label="Précédent">‹</button>
+              <button class="gallery-nav next hidden" onclick="setGalleryImg(currentIdx + 1)" aria-label="Suivant">›</button>
+            </div>
+            <div class="gallery-thumbs" id="gallery-thumbs"></div>
+          </div>
+
+          <!-- Infos -->
+          <div class="product-info">
+            <span class="product-detail-tag">Gravure laser</span>
+            <h1 class="product-detail-name">${escapeHtml(p.name)}</h1>
+
+            <div class="product-detail-price-block">
+              ${priceHtml}
+            </div>
+
+            <p class="product-detail-short">${escapeHtml(p.description)}</p>
+
+            ${persoSection}
+
+            <!-- Quantité -->
+            <div class="qty-row">
+              <span class="qty-label">Quantité</span>
+              <div class="qty-control">
+                <button class="qty-btn" onclick="changeQty(-1)" aria-label="Diminuer">−</button>
+                <input class="qty-input" type="number" id="qty" value="1" min="1" max="${p.stock > 0 ? p.stock : 99}" readonly />
+                <button class="qty-btn" onclick="changeQty(1)" aria-label="Augmenter">+</button>
+              </div>
+              ${p.stock > 0 ? `<span style="font-size:0.78rem;color:var(--text-light);">Stock : ${p.stock}</span>` : '<span style="font-size:0.78rem;color:var(--red);font-weight:600;">Épuisé</span>'}
+            </div>
+
+            <!-- Bouton panier -->
+            <button
+              class="btn-add-cart"
+              id="btn-add-cart"
+              onclick="addToCart()"
+              ${p.stock <= 0 ? 'disabled' : ''}
+            >
+              🛒 ${p.stock <= 0 ? 'Produit épuisé' : 'Ajouter au panier'}
+            </button>
+
+            <!-- Trust mini -->
+            <div class="trust-mini">
+              <div class="trust-mini-item"><span>🔒</span><span>Paiement 100 % sécurisé via Stripe</span></div>
+              <div class="trust-mini-item"><span>🚚</span><span>Livraison rapide et soignée</span></div>
+              <div class="trust-mini-item"><span>🇫🇷</span><span>Conçu &amp; fabriqué en France</span></div>
+              <div class="trust-mini-item"><span>⏱️</span><span>Fabriqué à la commande en 3-5 jours</span></div>
+            </div>
+          </div>
+        </div>
+
+        ${longDesc}
+      `;
+
+      // Rendre la galerie interactive
+      renderGallery(images);
+
+      // Correction des boutons nav galerie
+      const prevBtn = document.querySelector('.gallery-nav.prev');
+      const nextBtn = document.querySelector('.gallery-nav.next');
+      if (prevBtn) prevBtn.onclick = () => setGalleryImg(currentIdx - 1);
+      if (nextBtn) nextBtn.onclick = () => setGalleryImg(currentIdx + 1);
+    }
+
+    // ── Compteur textarea ────────────────────────────────────
+    window.updateCounter = function(el) {
+      const len = el.value.length;
+      const ctr = document.getElementById('text-counter');
+      if (ctr) {
+        ctr.textContent = `${len} / 250 caractères`;
+        ctr.className   = 'perso-counter' + (len >= 240 ? ' warn' : '');
+      }
+    };
+
+    // ── Contrôle quantité ────────────────────────────────────
+    window.changeQty = function(delta) {
+      const input = document.getElementById('qty');
+      if (!input) return;
+      const max = parseInt(input.max) || 99;
+      const newVal = Math.max(1, Math.min(parseInt(input.value) + delta, max));
+      input.value = newVal;
+    };
+
+    // ── Ajouter au panier ────────────────────────────────────
+    let currentProduct = null;
+
+    window.addToCart = function() {
+      if (!currentProduct) return;
+      const p   = currentProduct;
+      const qty = parseInt(document.getElementById('qty')?.value || '1');
+      const customText     = document.getElementById('custom-text')?.value.trim() || '';
+      const customImageUrl = document.getElementById('custom-img')?.value.trim() || '';
+
+      const cart  = getCart();
+      const price = p.salePrice && p.salePrice < p.price ? p.salePrice : p.price;
+
+      // Chercher un item identique (même produit + même perso)
+      const existing = cart.find(i =>
+        i.productId === p.id &&
+        i.customText === customText &&
+        i.customImageUrl === customImageUrl
+      );
+
+      if (existing) {
+        existing.quantity = (existing.quantity || 1) + qty;
+      } else {
+        cart.push({
+          productId: p.id,
+          name: p.name,
+          price,
+          originalPrice: p.price,
+          image: (p.images && p.images[0]) || p.image || '',
+          quantity: qty,
+          customText,
+          customImageUrl,
+        });
+      }
+
+      saveCart(cart);
+      showToast('✓ Ajouté au panier !', 'success');
+    };
+
+    // ── Chargement du produit ────────────────────────────────
+    async function loadProduct() {
+      const params    = new URLSearchParams(window.location.search);
+      const productId = params.get('id');
+
+      if (!productId) {
+        document.getElementById('product-page').innerHTML = `
+          <div style="text-align:center;padding:4rem;">
+            <div style="font-size:2.5rem;margin-bottom:1rem;">🔍</div>
+            <h2 style="font-family:var(--font-serif);">Produit introuvable</h2>
+            <p style="margin:1rem 0;color:var(--text-light);">Aucun identifiant de produit fourni.</p>
+            <a href="/" style="color:var(--copper);text-decoration:underline;">← Retour à la boutique</a>
+          </div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/products/${productId}`);
+        if (!res.ok) throw new Error('Produit introuvable');
+        const p   = await res.json();
+
+        // Mettre à jour le titre de la page
+        document.title = `${p.name} — L'Atelier Laser`;
+
+        currentProduct = p;
+        renderProduct(p);
+
+      } catch (err) {
+        document.getElementById('product-page').innerHTML = `
+          <div style="text-align:center;padding:4rem;">
+            <div style="font-size:2.5rem;margin-bottom:1rem;">😕</div>
+            <h2 style="font-family:var(--font-serif);">Produit introuvable</h2>
+            <p style="margin:1rem 0;color:var(--text-light);">${escapeHtml(err.message)}</p>
+            <a href="/" style="color:var(--copper);text-decoration:underline;">← Retour à la boutique</a>
+          </div>`;
+      }
+    }
+
+    loadProduct();
+  </script>
+
+</body>
+</html>
