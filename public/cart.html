@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon panier — L'Atelier Laser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ═══ TRUST STRIP ══════════════════════════════════════ -->
+  <div class="trust-strip">
+    <div class="trust-inner">
+      <div class="trust-item"><span>🔒</span><span>Paiement <strong>100 % sécurisé</strong> via Stripe</span></div>
+      <div class="trust-item"><span>🚚</span><span><strong>Livraison rapide</strong> &amp; soignée</span></div>
+      <div class="trust-item"><span>🇫🇷</span><span><strong>Conçu &amp; fabriqué</strong> en France</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-title">L'Atelier Laser</span>
+        <span class="logo-subtitle">Gravures personnalisées sur-mesure</span>
+      </a>
+      <div class="header-right">
+        <span class="header-badge">
+          <span>✦</span>
+          <span>Artisan créateur</span>
+        </span>
+        <a href="/cart" class="cart-btn" id="cart-btn" aria-label="Mon panier">
+          🛒
+          <span>Panier</span>
+          <span class="cart-count hidden" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ PANIER ════════════════════════════════════════════ -->
+  <main class="cart-page">
+    <h1>🛒 Mon panier</h1>
+
+    <div class="cart-layout" id="cart-layout">
+      <!-- Chargé dynamiquement -->
+    </div>
+  </main>
+
+  <!-- ═══ FOOTER ════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="footer-logo">L'Atelier Laser</div>
+    <p class="footer-text">
+      Artisan créateur · Julien Mélis<br>
+      Gravures personnalisées sur bois, acrylique et métal
+    </p>
+  </footer>
+
+  <!-- ═══ TOAST ═════════════════════════════════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══ SCRIPT ════════════════════════════════════════════ -->
+  <script>
+    // ── Helpers ─────────────────────────────────────────────
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    function formatPrice(cents) {
+      return (cents / 100).toLocaleString('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
+    }
+
+    // ── Toast ───────────────────────────────────────────────
+    const toastEl = document.getElementById('toast');
+    let toastTimer;
+    function showToast(msg, type = '') {
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.className = 'toast' + (type ? ' ' + type : '');
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    // ── Panier ──────────────────────────────────────────────
+    function getCart() {
+      try { return JSON.parse(sessionStorage.getItem('cart') || '[]'); } catch { return []; }
+    }
+
+    function saveCart(cart) {
+      sessionStorage.setItem('cart', JSON.stringify(cart));
+      updateCartBadge();
+      renderCart();
+    }
+
+    function updateCartBadge() {
+      const cart  = getCart();
+      const total = cart.reduce((s, i) => s + (i.quantity || 1), 0);
+      const badge = document.getElementById('cart-count');
+      if (total > 0) {
+        badge.textContent = total;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function changeQty(index, delta) {
+      const cart = getCart();
+      if (!cart[index]) return;
+      cart[index].quantity = Math.max(1, (cart[index].quantity || 1) + delta);
+      saveCart(cart);
+    }
+
+    function removeItem(index) {
+      const cart = getCart();
+      cart.splice(index, 1);
+      saveCart(cart);
+    }
+
+    window.changeQty  = changeQty;
+    window.removeItem = removeItem;
+
+    // ── Rendu panier ─────────────────────────────────────────
+    function renderCart() {
+      const cart   = getCart();
+      const layout = document.getElementById('cart-layout');
+
+      if (cart.length === 0) {
+        layout.innerHTML = `
+          <div class="cart-empty" style="grid-column:1/-1;">
+            <div class="empty-icon">🛒</div>
+            <h3>Votre panier est vide</h3>
+            <p style="margin:0.5rem 0 1.5rem;">Découvrez nos créations et ajoutez-en au panier !</p>
+            <a href="/" class="btn-view">← Retour à la boutique</a>
+          </div>`;
+        return;
+      }
+
+      const subtotal = cart.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+      const shipping = 0; // gratuit pour simplifier
+      const total    = subtotal + shipping;
+
+      const itemsHtml = cart.map((item, idx) => {
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+        const imgSrc    = item.image || 'https://placehold.co/90x70/ede8de/8b5e3c?text=?';
+        const persoLines = [
+          item.customText     ? `✏️ « ${escapeHtml(item.customText)} »` : '',
+          item.customImageUrl ? `🖼️ Image fournie` : '',
+        ].filter(Boolean);
+
+        return `
+          <div class="cart-item">
+            <img
+              class="cart-item-img"
+              src="${escapeHtml(imgSrc)}"
+              alt="${escapeHtml(item.name)}"
+              onerror="this.src='https://placehold.co/90x70/ede8de/8b5e3c?text=?'"
+            />
+            <div class="cart-item-body">
+              <div class="cart-item-name">${escapeHtml(item.name)}</div>
+              ${persoLines.length ? `<div class="cart-item-perso">${persoLines.map(l => `<span>${l}</span>`).join('')}</div>` : ''}
+              <div class="cart-item-qty">
+                <div class="qty-control">
+                  <button class="qty-btn" onclick="changeQty(${idx}, -1)" aria-label="Diminuer">−</button>
+                  <input class="qty-input" type="number" value="${item.quantity || 1}" min="1" readonly />
+                  <button class="qty-btn" onclick="changeQty(${idx}, 1)" aria-label="Augmenter">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="cart-item-right">
+              <span class="cart-item-price">${formatPrice(itemTotal)}</span>
+              <button class="cart-item-remove" onclick="removeItem(${idx})" aria-label="Supprimer">
+                🗑 Retirer
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+      layout.innerHTML = `
+        <!-- Liste articles -->
+        <div class="cart-items">
+          ${itemsHtml}
+        </div>
+
+        <!-- Récapitulatif -->
+        <aside class="cart-summary">
+          <h2>Récapitulatif</h2>
+          <div class="summary-rows">
+            <div class="summary-row">
+              <span>Sous-total (${cart.reduce((s,i) => s+(i.quantity||1),0)} article${cart.reduce((s,i) => s+(i.quantity||1),0) > 1 ? 's' : ''})</span>
+              <span>${formatPrice(subtotal)}</span>
+            </div>
+            <div class="summary-row">
+              <span>Livraison</span>
+              <span>${shipping === 0 ? 'Calculée à la commande' : formatPrice(shipping)}</span>
+            </div>
+            <div class="summary-row total">
+              <span>Total</span>
+              <span class="amount">${formatPrice(total)}</span>
+            </div>
+          </div>
+
+          <button class="btn-checkout" id="btn-checkout" onclick="checkout()">
+            🔒 Payer maintenant
+          </button>
+
+          <div class="cart-trust">
+            <div class="cart-trust-item"><span>🔒</span><span>Paiement sécurisé par Stripe</span></div>
+            <div class="cart-trust-item"><span>💳</span><span>Carte bancaire, Apple Pay, Google Pay</span></div>
+            <div class="cart-trust-item"><span>🛡️</span><span>Données chiffrées et protégées</span></div>
+          </div>
+
+          <a href="/" class="continue-shopping">← Continuer mes achats</a>
+        </aside>
+      `;
+    }
+
+    // ── Checkout ─────────────────────────────────────────────
+    async function checkout() {
+      const cart = getCart();
+      if (!cart.length) return;
+
+      const btn = document.getElementById('btn-checkout');
+      if (!btn) return;
+
+      btn.classList.add('loading');
+      btn.innerHTML = '<span class="spinner"></span> Redirection vers le paiement…';
+      btn.disabled  = true;
+
+      try {
+        const payload = cart.map(item => ({
+          productId:      item.productId,
+          quantity:       item.quantity || 1,
+          customText:     item.customText || '',
+          customImageUrl: item.customImageUrl || '',
+        }));
+
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart: payload }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Erreur lors du paiement');
+
+        // Vider le panier après redirection
+        sessionStorage.removeItem('cart');
+
+        window.location.href = data.url;
+
+      } catch (err) {
+        showToast(err.message, 'error');
+        btn.classList.remove('loading');
+        btn.innerHTML = '🔒 Payer maintenant';
+        btn.disabled  = false;
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    updateCartBadge();
+    renderCart();
+  </script>
+
+</body>
+</html>
