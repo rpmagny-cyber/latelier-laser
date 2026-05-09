@@ -4,36 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Commande confirmée — L'Atelier Laser</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
 </head>
 <body>
-
-  <div class="result-page">
-    <div class="result-card">
-      <div class="result-icon success-icon">✅</div>
-      <h1>Merci pour votre commande !</h1>
-      <p>
-        Votre paiement a bien été recu. Julien Mélis va préparer votre création
-        avec soin et vous l'expédier dans les meilleurs délais.
-      </p>
-      <p>
-        Un email de confirmation vous a été envoyé par Stripe. Conservez-le
-        pour le suivi de votre commande.
-      </p>
-      <p id="session-info"></p>
-      <a href="/" class="btn-back">← Retour à la boutique</a>
-    </div>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="header-logo">
+      <div class="header-logo-icon">🔥</div>
+      <div class="header-logo-text">
+        <span class="header-logo-title">L'Atelier Laser</span>
+        <span class="header-logo-subtitle">Gravure artisanale</span>
+      </div>
+    </a>
+    <nav class="header-nav"><a href="/">Boutique</a></nav>
   </div>
-
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
-    if (sessionId) {
-      document.getElementById('session-info').innerHTML =
-        `<span class="result-id">Référence : ${sessionId}</span>`;
-    }
-  </script>
-
+</header>
+<main class="success-page">
+  <div class="success-card">
+    <span class="success-icon">🎁</span>
+    <h1>Commande confirmée !</h1>
+    <p>Tenci pour votre commande. Nous avons bien reçu votre paiement et allons commencer la gravure de votre création très prochainement.</p>
+    <p style="font-size:.9rem;color:var(--gris-dark);">Un email de confirmation vous a été envoyeé. Votre commande sera expédiée sous 3-5 jours ouvrés depuis notre atelier breton.</p>
+    <div style="margin:28px 0;padding:20px;background:var(--creme-dark);border-radius:var(--radius-lg);text-align:left;"><div style="display:flex;flex-direction:column;gap:10px;"><div style="display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--texte-light);"><span>💇�</span> Email de confirmation envoyé</div><div style="display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--texte-light);"><span>⚡</span> Fabrication en cours dans notre atelier</div><div style="display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--texte-light);"><span>📦</span> Expédition sous 3-5 jours ouvrés</div></div></div>
+    <a href="/" class="btn btn-primary" style="width:100%;justify-content:center;">← Retourner à la boutique</a>
+  </div>
+</main>
+<script>sessionStorage.removeItem('cart');</script>
 </body>
+</html>
