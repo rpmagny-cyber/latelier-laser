@@ -1,52 +1,53 @@
 [
   {
-    "id": "1",
-    "name": "Planche à découper personnalisée",
-    "description": "Planche en bois de hêtre gravée avec le prénom ou message de votre choix. Format 30x20 cm.",
-    "descriptionLong": "<p>Offrez ou faites-vous plaisir avec cette magnifique planche à découper en bois de hêtre massif, gravée au laser avec la précision artisanale de L'Atelier Laser.</p><p><strong>Caractéristiques :</strong></p><ul><li>Dimensions : 30 x 20 cm</li><li>Épaisseur : 2 cm</li><li>Matière : Hêtre massif certifié FSC</li><li>Gravure laser haute précision</li><li>Finition à l'huile alimentaire naturelle</li></ul><p>Vous pouvez personnaliser avec un prénom, une date, un message ou même votre logo. La gravure est permanente et résiste à l'humidité.</p><p>Fabriquée à la commande dans notre atelier en France, chaque pièce est unique. Délai de fabrication : 3 à 5 jours ouvrés.</p>",
-    "price": 3500,
-    "salePrice": null,
+    "id": "porte-cle-simili-cuir",
+    "name": "Porte-clé en simili cuir gravé",
+    "description": "Porte-clé personnalisable en simili cuir avec gravure laser de précision",
+    "descriptionLong": "<p>Offrez ou offrez-vous un <strong>porte-clé unique en simili cuir</strong>, gravé avec une précision laser incomparable. Chaque pièce est fabriquée à la main dans notre atelier en France.</p><p>La gravure laser crée un contraste élégant sur le simili cuir, révélant votre texte ou motif avec une netteté remarquable. Idéal pour un <strong>cadeau personnalisé</strong> : prénom, date de naissance, message d'amour, initiales...</p><ul><li>Dimensions : 8 × 4 cm</li><li>Matière : simili cuir haute qualité</li><li>Anneau métallique argenté inclus</li><li>Gravure laser précise et durable</li><li>Fabriqué en France</li></ul>",
+    "price": 1290,
+    "salePrice": 990,
+    "stock": 50,
     "images": [
-      "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=600",
-      "https://images.unsplash.com/photo-1605522561233-768ad7a8fabf?w=600",
-      "https://images.unsplash.com/photo-1515443961218-a51367888e4b?w=600"
+      "https://images.unsplash.com/photo-1609137144813-7d9921338f24?w=600&q=80",
+      "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600&q=80",
+      "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&q=80"
     ],
-    "image": "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=600",
-    "stock": 10,
+    "image": "https://images.unsplash.com/photo-1609137144813-7d9921338f24?w=600&q=80",
     "allowText": true,
     "allowImage": false
   },
   {
-    "id": "2",
-    "name": "Porte-clés gravé",
-    "description": "Porte-clés en bois ou acrylique avec gravure personnalisée. Idéal comme cadeau.",
-    "descriptionLong": "<p>Ce porte-clés artisanal est la touche personnalisée idéale pour vous ou à offrir. Gravé au laser avec une précision exceptionnelle dans notre atelier en Bretagne.</p><p><strong>Caractéristiques :</strong></p><ul><li>Dimensions : 5 x 3 cm</li><li>Matière au choix : bois de cerisier ou acrylique teinté</li><li>Anneau inox argenté inclus</li><li>Gravure laser recto ou recto-verso</li></ul><p>Idéal pour : cadeaux d'anniversaire, mariage, naissance, EVJF, comité d'entreprise...</p><p>Commande minimum : 1 pièce. Tarifs dégressifs à partir de 10 pièces.</p>",
-    "price": 1200,
-    "salePrice": 990,
+    "id": "plaque-bois-gravee",
+    "name": "Plaque en bois gravée personnalisée",
+    "description": "Plaque décorative en bois massif avec gravure laser sur mesure",
+    "descriptionLong": "<p>Sublimez votre intérieur ou offrez un cadeau mémorable avec notre <strong>plaque en bois massif gravée au laser</strong>. Chaque pièce est unique, taillée dans un bois soigneusement sélectionné pour ses veines naturelles.</p><p>La gravure laser sublime le bois en créant un contraste chaud et élégant. Parfaite pour une <strong>plaque de porte personnalisée</strong>, un cadeau de mariage, un souvenir de naissance ou une décoration murale.</p><ul><li>Dimensions : 20 × 10 cm</li><li>Matière : bois massif naturel (tilleul)</li><li>Fixation murale incluse</li><li>Gravure laser profonde et durable</li><li>Finition vernis mat</li><li>Fabriqué en France</li></ul>",
+    "price": 2490,
+    "salePrice": null,
+    "stock": 30,
     "images": [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600",
-      "https://images.unsplash.com/photo-1581591524425-c7e0978865fc?w=600"
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+      "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&q=80",
+      "https://images.unsplash.com/photo-1567016432779-094069958ea5?w=600&q=80"
     ],
-    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600",
-    "stock": 25,
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
     "allowText": true,
     "allowImage": true
   },
   {
-    "id": "3",
-    "name": "Cadre photo en bois gravé",
-    "description": "Cadre photo 15x10 cm en bois gravé avec date ou message. Finition naturelle.",
-    "descriptionLong": "<p>Sublimez vos plus beaux souvenirs avec ce cadre photo en bois gravé à la main dans notre atelier. Un cadeau original et émouvant pour toutes les occasions.</p><p><strong>Caractéristiques :</strong></p><ul><li>Format photo : 15 x 10 cm (format standard)</li><li>Épaisseur cadre : 1,5 cm</li><li>Matière : bouleau ou noyer selon disponibilité</li><li>Vitre en verre véritable incluse</li><li>Peut être posé ou accroché au mur</li></ul><p>Personnalisez avec une date, un prénom, une citation ou votre message. Vous pouvez également envoyer une photo ou un dessin à graver directement sur le cadre.</p><p>Chaque cadre est fabriqué à la commande — comptez 5 à 7 jours ouvrés.</p>",
-    "price": 2800,
-    "salePrice": null,
+    "id": "ardoise-personnalisee",
+    "name": "Ardoise personnalisée gravée",
+    "description": "Ardoise naturelle gravée au laser, idéale pour menus, citations ou cadeaux",
+    "descriptionLong": "<p>Authentique et élégante, notre <strong>ardoise naturelle gravée au laser</strong> apportera une touche rustique et chic à votre décoration. Parfaite pour afficher un menu, une citation inspirante ou pour marquer une occasion spéciale.</p><p>La gravure laser sur ardoise crée un effet blanc nacré très tendance, parfait pour les restaurants, cafés, ou comme décoration murale chez vous.</p><ul><li>Dimensions : 15 × 20 cm</li><li>Matière : ardoise naturelle du Finistère</li><li>Œillets métalliques pour suspension</li><li>Gravure laser permanente</li><li>Livré avec craies de couleur</li><li>Fabriqué en France (Bretagne)</li></ul>",
+    "price": 1990,
+    "salePrice": 1590,
+    "stock": 20,
     "images": [
-      "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=600",
-      "https://images.unsplash.com/photo-1541643600914-78b084683702?w=600",
-      "https://images.unsplash.com/photo-1560942485-b2a11cc13456?w=600"
+      "https://images.unsplash.com/photo-1586380951230-40c19031d29b?w=600&q=80",
+      "https://images.unsplash.com/photo-1464802686167-b939a6910659?w=600&q=80",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80"
     ],
-    "image": "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=600",
-    "stock": 8,
+    "image": "https://images.unsplash.com/photo-1586380951230-40c19031d29b?w=600&q=80",
     "allowText": true,
-    "allowImage": true
+    "allowImage": false
   }
 ]
